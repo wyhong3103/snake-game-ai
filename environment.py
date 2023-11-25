@@ -123,6 +123,7 @@ class Environment:
 
         # Spawn a new apple, because previous apple is taken by the new head
         if (temp_head == self.apple_coord):
+            reward += 100
             self.spawn_apple()
         
         return [self.board, reward, False]
