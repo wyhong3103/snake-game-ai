@@ -16,10 +16,10 @@ class Environment:
 
 
     def __init__(self):
-        self.N = 20
+        self.N = 8
         self.APPLE = self.N ** 2 + 1
         self.EMPTY_CELL = 0
-        self.state_size = self.N ** 2
+        self.state_size = 11
         self.number_of_actions = 3
         self.reset()
     
@@ -33,7 +33,7 @@ class Environment:
         self.direction = 0
         self.spawn_apple()
 
-        return self.board
+        return self.get_state()
 
     # Spawn an apple randomly and set apple's coordinate
     def spawn_apple(self):
@@ -53,14 +53,7 @@ class Environment:
     def calculate_distance(self, a, b):
         return abs(a[0]-b[0]) + abs(a[1] - b[1])
     
-    # Return [state, reward, done]
-    def step(self, action):
-        if (action >= 3):
-            raise Exception("Action invalid")
-        
-        # Make a copy of the current board
-        temp_board = copy.deepcopy(self.board)
-
+    def get_new_dir(self, action):
         # Choose direction
         if (action == 1):
             # left
@@ -68,19 +61,28 @@ class Environment:
             # 2 to 3
             # 3 to 0
             # 1 to 2
-            self.direction = (self.direction + 1) % 4
+            return (self.direction + 1) % 4
         elif (action == 2):
             # right
             # 0 to 3
             # 1 to 0
             # 2 to 1
             # 3 to 2
-            self.direction = (self.direction - 1) % 4
+            return (self.direction - 1) % 4
+        else:
+            return self.direction
+
+    # Return [temp_board, temp_head, isDanger]
+    def move_temp(self, action):
+        # Make a copy of the current board
+        temp_board = copy.deepcopy(self.board)
+
+        dir = self.get_new_dir(action)
         
         # Set temporary head
         dr = [1, 0, -1, 0]
         dc = [0, 1, 0, -1]
-        temp_head = [self.head[0] + dr[self.direction], self.head[1] + dc[self.direction]]
+        temp_head = [self.head[0] + dr[dir], self.head[1] + dc[dir]]
 
         # If head is invalid, reward = -100
         if (
@@ -89,7 +91,7 @@ class Environment:
             temp_head[1] >= self.N or
             temp_head[1] < 0
         ):
-            return [self.board, -100, True]
+            return [dir, temp_board, temp_head, True]
 
         # Move snake body and find tail
         snake_length = 0
@@ -109,24 +111,52 @@ class Environment:
 
         # If head touches its body, reward = -100
         if (temp_board[temp_head[0]][temp_head[1]] not in [self.APPLE, self.EMPTY_CELL]):
-            return [self.board, -100, True]
+            return [dir, temp_board, temp_head, True]
 
-        # Check the distance between the apple before and after
-        # If snake is closer to apple then 20 reward, otherwise -5
-        reward = 20 if self.calculate_distance(self.apple_coord, self.head) > self.calculate_distance(self.apple_coord, temp_head) else -5
-        
         # Set the new head on the grid
         temp_board[temp_head[0]][temp_head[1]] = 1
 
+        return [dir, temp_board, temp_head, False]
+
+    def get_state(self):
+        return [
+            # Danger S
+            self.move_temp(0)[3],
+            # Danger L
+            self.move_temp(1)[3],
+            # Danger R
+            self.move_temp(2)[3],
+            self.direction == 0,
+            self.direction == 1,
+            self.direction == 2,
+            self.direction == 3,
+            self.head[0] < self.apple_coord[0],
+            self.head[0] > self.apple_coord[0],
+            self.head[1] < self.apple_coord[1],
+            self.head[1] > self.apple_coord[1]
+        ]
+
+    # Return [state, reward, done]
+    def step(self, action):
+        if (action >= 3):
+            raise Exception("Action invalid")
+
+        dir, temp_board, temp_head, done = self.move_temp(action)
+
+        if done:
+            return [self.get_state(), -10, True]
+
         self.board = temp_board
         self.head = temp_head
+        self.direction = dir
 
+        reward = 0
         # Spawn a new apple, because previous apple is taken by the new head
         if (temp_head == self.apple_coord):
-            reward += 100
+            reward = 5
             self.spawn_apple()
         
-        return [self.board, reward, False]
+        return [self.get_state(), reward, False]
             
 
     def render(self):
@@ -153,8 +183,10 @@ def test_run():
     while True:
         action = int(input())
         state, reward, done = env.step(action)
-        print(reward)
         os.system('cls')
         env.render()
+        print(state, reward, done)
         if (done):
             break
+
+test_run()
