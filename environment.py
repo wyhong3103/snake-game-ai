@@ -12,6 +12,21 @@ class Environment:
     - 0: Step into current direction
     - 1: Step into the left of the current direction (also change direction)
     - 2: Step into the right of the current direction (also change direction)
+
+    For state, we use only 11 information to help the neural network to train
+    [
+        Danger at S,
+        Danger at L, 
+        Danger at R, 
+        Moving Down, 
+        Moving Right, 
+        Moving Up, 
+        Moving Left, 
+        Apple is below the Snake, 
+        Apple is above the Snake, 
+        Apple is right side of the Snake, 
+        Apple is left side of the Snake
+    ]
     """
 
 
@@ -72,7 +87,7 @@ class Environment:
         else:
             return self.direction
 
-    # Return [temp_board, temp_head, isDanger]
+    # Return [new direction, new board, new head, is dangerous]
     def move_temp(self, action):
         # Make a copy of the current board
         temp_board = copy.deepcopy(self.board)
@@ -179,14 +194,16 @@ def test_run():
     env = Environment()
     env.reset()
 
+    os.system('cls')
     env.render()
     while True:
-        action = int(input())
+        action = int(input("0 - Go straight\n1 - Go left of the snake\n2 - Go right of the snake\nMove: "))
         state, reward, done = env.step(action)
         os.system('cls')
         env.render()
-        print(state, reward, done)
         if (done):
+            print("The game has ended")
             break
 
-test_run()
+# Uncomment it if you want to play it yourself
+# test_run()
